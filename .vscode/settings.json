@@ -1,0 +1,12 @@
+{
+	"editor.formatOnSave": false,
+	"emeraldwalk.runonsave": {
+		"commands": [
+			{
+				"isAsync": true,
+				"match": "\\.(py)$",
+				"cmd": "make format"
+			}
+		]
+	}
+}

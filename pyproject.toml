@@ -1,0 +1,68 @@
+[project]
+name = "crab-compensation"
+version = "0.0.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "Malakai Spann", email = "malakaispann@gmail.com" }
+]
+license = {file = "LICENSE"}
+classifiers = [
+    'Intended Audience :: Developers',
+    'License :: OSI Approved :: MIT License',
+    'Programming Language :: Python',
+    'Programming Language :: Python :: 3',
+    'Programming Language :: Python :: 3 :: Only',
+    'Topic :: Software Development',
+    'Topic :: Software Development :: Libraries :: Python Modules',
+    'Operating System :: Microsoft :: Windows',
+    'Operating System :: POSIX',
+    'Operating System :: Unix',
+    'Operating System :: MacOS',
+]
+
+requires-python = ">=3.13"
+
+dependencies = [
+    "pydantic>=2.12.5",
+    "pyspark>=4.0.1",
+]
+
+[dependency-groups]
+dev = [
+	{include-group = "format"},
+  	{include-group = "test"}
+]
+format = [
+    "black>=25.11.0",
+    "pylint>=4.0.4",
+    "pylint-per-file-ignores>=3.2.0",
+]
+infra = [
+    "boto3>=1.42.4",
+]
+test = [
+    "pytest>=9.0.1",
+    "pytest-mock>=3.15.1",
+    "pytest-random-order>=1.2.0",
+]
+
+[project.urls]
+Repository = "https://github.com/malakaispann/crab-compensation/"
+
+[build-system]
+requires = ["uv_build>=0.9.14,<0.10.0"]
+build-backend = "uv_build"
+
+[tool.pytest.ini_options]
+addopts = "-rpfs --quiet --show-capture=no --random-order-bucket=class --color=no"
+testpaths = [
+    "src/tests"
+]
+pythonpath = [
+    "src"
+]
+
+[tool.uv.build-backend]
+module-name = "crabcomp"
+module-root = "src"
