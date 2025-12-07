@@ -5,6 +5,9 @@ from logging import Formatter, Logger, StreamHandler
 from typing import override
 
 
+__all__ = ["configure", "JsonFormatter"]
+
+
 class JsonFormatter(Formatter):
     """An formatter used to output all logs in JSON format."""
 
@@ -20,7 +23,7 @@ class JsonFormatter(Formatter):
         )
 
 
-def configure(level: int, logger: Logger) -> Logger:
+def configure_logger(level: int, logger: Logger) -> Logger:
     """Configures the passed logger.
 
     Adds JSON-formatted log streaming to stdout.

@@ -3,10 +3,13 @@ import logging
 from pytest import mark, raises
 from pydantic import ValidationError
 
-from crabcomp.config import DataStoreConfig, LoggingConfig
+from crabcomp.config import AppConfig
 
 
-class TestLoggingConfig:
+MINIMUM_VALID_CONFIG = {"DATA_URI": "https://foo.com/bar.tar.gz"}
+
+
+class TestLogLevel:
 
     CONFIG_ID = "LOG_LEVEL"
 
@@ -24,20 +27,22 @@ class TestLoggingConfig:
         self, level: str, representation: int
     ):
         assert (
-            LoggingConfig.model_validate({self.CONFIG_ID: level}).level
+            AppConfig.model_validate(
+                {self.CONFIG_ID: level} | MINIMUM_VALID_CONFIG
+            ).level
             == representation
         )
 
     def test_Returns_info_representation_When_level_not_provided(self):
-        assert LoggingConfig.model_validate({}).level == logging.INFO
+        assert AppConfig.model_validate(MINIMUM_VALID_CONFIG | {}).level == logging.INFO
 
     def test_Raises_validation_error_When_notset_level_provided(self):
         with raises(ValidationError):
-            LoggingConfig.model_validate({self.CONFIG_ID: "NOTSET"})
+            AppConfig.model_validate(MINIMUM_VALID_CONFIG | {self.CONFIG_ID: "NOTSET"})
 
     def test_Raises_validation_error_When_invalid_level_provided(self):
         with raises(ValidationError):
-            LoggingConfig.model_validate({self.CONFIG_ID: "foo"})
+            AppConfig.model_validate(MINIMUM_VALID_CONFIG | {self.CONFIG_ID: "foo"})
 
 
 class TestDataStoreConfig:
@@ -47,7 +52,12 @@ class TestDataStoreConfig:
     def test_Returns_unmodified_value_When_provided_url(self):
         url = "s3://foo/bar/baz.tar.gz"
         assert (
-            str(DataStoreConfig.model_validate({self.CONFIG_ID: url}).data_uri) == url
+            str(
+                AppConfig.model_validate(
+                    MINIMUM_VALID_CONFIG | {self.CONFIG_ID: url}
+                ).data_uri
+            )
+            == url
         )
 
     @mark.skip("Implement mock for exist and file check")

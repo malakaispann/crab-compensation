@@ -14,17 +14,9 @@ from pydantic import (
 )
 from pydantic_core import PydanticCustomError
 
-__all__ = ["Uri", "DataStoreConfig", "LoggingConfig"]
+__all__ = ["Uri", "AppConfig"]
 
 type Uri = AnyUrl | Path  # order is significant
-
-_shared_model_config = ConfigDict(
-    frozen=True,
-    extra="ignore",
-    serialize_by_alias=True,
-    validate_by_alias=True,
-    validate_by_name=False,
-)
 
 
 def _check_uri(uri: Uri) -> Uri:
@@ -43,7 +35,7 @@ def _check_uri(uri: Uri) -> Uri:
         return uri
 
     # Ensure file exists if it's a local path
-    if isinstance(uri, Path) and (not uri.exists() or uri.is_file()):
+    if isinstance(uri, Path) and not (uri.exists() or uri.is_file()):
         raise ValidationError.from_exception_data(
             title="Invalid Data Path",
             line_errors=[
@@ -96,24 +88,23 @@ def _transform_log_string(level: Any) -> int:
     )
 
 
-class DataStoreConfig(BaseModel):
-    """A configuration parser, validator, data storage construct used to
-    define the location of data used by the application.
+class AppConfig(BaseModel):
+    """
+    A configuration parser, validator, data storage construct used to
+    define the location of data used by the application, logging behavior, etc.
+    across the application.
     """
 
-    model_config = _shared_model_config
+    model_config = ConfigDict(
+        frozen=True,
+        extra="ignore",
+        serialize_by_alias=True,
+        validate_by_alias=True,
+        validate_by_name=False,
+    )
 
     data_uri: Annotated[Uri, AfterValidator(_check_uri), Field(alias="DATA_URI")]
     """The local path or web url to a file containing the expected data."""
-
-
-class LoggingConfig(BaseModel):
-    """
-    A configuration parser, validator, data storage construct used to
-    define logging behavior across the application
-    """
-
-    model_config = _shared_model_config
 
     level: Annotated[
         int, BeforeValidator(_transform_log_string), Field(alias="LOG_LEVEL")
