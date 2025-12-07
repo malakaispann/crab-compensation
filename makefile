@@ -21,5 +21,8 @@ install-prod:
 lint-check:
 	uv run pylint src
 
+start-local:
+	uv run --env-file dev.conf start 
+
 test:
 	uv run pytest
