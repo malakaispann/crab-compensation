@@ -1,0 +1,16 @@
+name: "Project Setup"
+description: "Install UV and dev dependencies for application."
+
+runs:
+  using: "composite"
+  steps:
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          version: "0.9.14"
+      
+      - name: Set up Python
+        run: uv python install
+
+      - name: Install dependencies
+        run: make install-dev
