@@ -5,17 +5,20 @@ fail-under = 9
 
 [MESSAGES CONTROL]
 disable=
+    global-statement,
     logging-fstring-interpolation,
+    missing-module-docstring,
+    too-few-public-methods,
     unnecessary-ellipsis,
-    missing-module-docstring
 
 per-file-ignores=
-    src/tests/**:invalid-name,missing-class-docstring,missing-function-docstring
+    src/tests/**: invalid-name, missing-class-docstring, missing-function-docstring, redefined-outer-name, unused-argument
 
 
 [BASIC]
-variable-rgx=[a-z_][a-z0-9_]{2,15}$
-argument-rgx=[a-z_][a-z0-9_]{2,15}$
+const-rgx=(([A-Z_][A-Z0-9_]*)|(__.*__)|(_[a-z0-9_]+))$
+variable-rgx=[a-z_][a-z0-9_]{2,20}$
+argument-rgx=[a-z_][a-z0-9_]{2,20}$
 method-rgx=[a-z_][a-z0-9_]{2,50}$
 module-rgx=(([a-z_][a-z0-9_]*)|([A-Z][a-zA-Z0-9]+))$
 

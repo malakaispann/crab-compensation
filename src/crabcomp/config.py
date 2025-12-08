@@ -138,7 +138,8 @@ class AppConfig(BaseModel):
             from the provided environment.
 
         Returns:
-            The wrapped application configuration if provided environment contains valid definitions.
+            The wrapped application configuration if provided environment contains
+            valid definitions.
         """
         _logger.debug("Attempting to application extract configuration.")
         try:

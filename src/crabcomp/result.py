@@ -6,13 +6,11 @@ from typing import override, Generic, Optional, TypeVar
 
 __all__ = ["ErrorCode", "GenericCode", "Result", "ResultCode"]
 
-T = TypeVar("Type")
-
-# TODO: Clean up docstrings.
+T = TypeVar("T")
 
 
 class ResultCode(enum.IntEnum):
-    """"""
+    """Base class for result codes representing success or failure states."""
 
     @override
     def __str__(self) -> str:
@@ -34,6 +32,7 @@ class ErrorCode(ResultCode):
     """
 
     def auto() -> int:
+        # pylint: disable=no-method-argument
         """Iterates on the last defined value."""
         return enum.auto()
 
