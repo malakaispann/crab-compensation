@@ -1,3 +1,6 @@
+import logging
+
+from pyspark.errors import PySparkException
 from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql.types import (
     DoubleType,
@@ -9,8 +12,9 @@ from pyspark.sql.types import (
 )
 
 from crabcomp.config import Uri
+from crabcomp.result import ErrorCode, Result
 
-DataSchema = StructType(
+_data_schema = StructType(
     [
         StructField(name="Fiscal Year", dataType=IntegerType(), nullable=False),
         StructField(name="Agency Name", dataType=StringType(), nullable=False),
@@ -23,8 +27,15 @@ DataSchema = StructType(
     ]
 )
 
+_logger = logging.getLogger(__name__)
 
-def read_csv(session: SparkSession, uri: Uri) -> DataFrame:
+
+class OperationErrorCodes(ErrorCode):
+
+    FAILED_READ = ErrorCode.auto()
+
+
+def read_csv(session: SparkSession, uri: Uri) -> Result[DataFrame]:
     """Reads the data file.
 
     Args:
@@ -34,11 +45,21 @@ def read_csv(session: SparkSession, uri: Uri) -> DataFrame:
     Returns:
         A cached dataframe read from the provided file.
     """
-    return (
-        session.read.schema(DataSchema)
-        .option(
-            "timestampFormat", "MM/dd/yyyy hh:mm:ss a"
-        )  # Dataset uses human-readable time instead of ISO-time
-        .csv(str(uri), header=True)
-        .cache()
-    )
+    _logger.debug(f"Reading in data from URI '{uri}'")
+
+    try:
+        dataframe = (
+            session.read.schema(_data_schema)
+            .option(
+                "timestampFormat", "MM/dd/yyyy hh:mm:ss a"
+            )  # Dataset uses human-readable time instead of ISO-time
+            .csv(str(uri), header=True)
+            .cache()
+        )
+    except PySparkException as exc:
+        _logger.error(
+            f"Failed to read datafile into dataframe. Error: {exc.getMessage()}"
+        )
+        return Result.failure(OperationErrorCodes.FAILED_READ)
+
+    return Result.success(dataframe)

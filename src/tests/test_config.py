@@ -1,10 +1,11 @@
 import logging
+import tempfile
+from pathlib import Path
 
 from pytest import mark, raises
 from pydantic import ValidationError
 
-from crabcomp.config import AppConfig
-
+from crabcomp.config import AppConfig, AppConfigErrorCodes
 
 MINIMUM_VALID_CONFIG = {"DATA_URI": "https://foo.com/bar.tar.gz"}
 
@@ -29,23 +30,28 @@ class TestLogLevel:
         assert (
             AppConfig.model_validate(
                 {self.CONFIG_ID: level} | MINIMUM_VALID_CONFIG
-            ).level
+            ).log_level
             == representation
         )
 
     def test_Returns_info_representation_When_level_not_provided(self):
-        assert AppConfig.model_validate(MINIMUM_VALID_CONFIG | {}).level == logging.INFO
+        assert (
+            AppConfig.model_validate(MINIMUM_VALID_CONFIG | {}).log_level
+            == logging.INFO
+        )
 
     def test_Raises_validation_error_When_notset_level_provided(self):
-        with raises(ValidationError):
+        with raises(ValidationError) as err:
             AppConfig.model_validate(MINIMUM_VALID_CONFIG | {self.CONFIG_ID: "NOTSET"})
+        assert "invalid_log_level" in str(err.value)
 
     def test_Raises_validation_error_When_invalid_level_provided(self):
-        with raises(ValidationError):
+        with raises(ValidationError) as err:
             AppConfig.model_validate(MINIMUM_VALID_CONFIG | {self.CONFIG_ID: "foo"})
+        assert "invalid_log_level" in str(err.value)
 
 
-class TestDataStoreConfig:
+class TestDataUri:
 
     CONFIG_ID = "DATA_URI"
 
@@ -60,17 +66,52 @@ class TestDataStoreConfig:
             == url
         )
 
-    @mark.skip("Implement mock for exist and file check")
     def test_Returns_unmodified_path_When_provided_local_path_that_exists_And_is_regular_file(
         self,
-    ): ...
+    ):
+        with tempfile.NamedTemporaryFile() as temp_file:
+            path = Path(temp_file.name)
+            config = AppConfig.model_validate(
+                MINIMUM_VALID_CONFIG | {self.CONFIG_ID: str(path)}
+            )
+            assert config.data_uri == path
 
-    @mark.skip("Implement mock for exist and file check")
     def test_Raises_validation_error_When_provided_local_path_that_does_not_exist(
         self,
-    ): ...
+    ):
+        non_existent_path = "/tmp/this_file_definitely_does_not_exist_1234567890.tar.gz"
+        with raises(ValidationError) as err:
+            AppConfig.model_validate(
+                MINIMUM_VALID_CONFIG | {self.CONFIG_ID: non_existent_path}
+            )
+        assert "invalid_data_path" in str(err.value)
 
-    @mark.skip("Implement mock for exist and file check")
     def test_Raises_validation_error_When_provided_local_path_that_exists_And_is_not_regular_file(
         self,
-    ): ...
+    ):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            with raises(ValidationError) as err:
+                AppConfig.model_validate(
+                    MINIMUM_VALID_CONFIG | {self.CONFIG_ID: temp_dir}
+                )
+            assert "invalid_data_path" in str(err.value)
+
+
+class TestExtract:
+
+    def test_Returns_success_result_With_config_When_valid_environment_provided(self):
+        result = AppConfig.extract(
+            {"DATA_URI": "https://example.com/data.tar.gz", "LOG_LEVEL": "INFO"}
+        )
+
+        assert result.is_success
+        assert result.value is not None
+        assert str(result.value.data_uri) == "https://example.com/data.tar.gz"
+        assert result.value.log_level == logging.INFO
+
+    def test_Returns_failure_result_When_invalid_environment_provided(self):
+        result = AppConfig.extract({"LOG_LEVEL": "INVALID"})
+
+        assert result.is_failure
+        assert result.code == AppConfigErrorCodes.INVALID_CONFIGURATION
+        assert result.value is None

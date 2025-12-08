@@ -1,7 +1,7 @@
 import logging
 
 from pathlib import Path
-from typing import Annotated, Any
+from typing import Annotated, Any, Mapping
 
 from pydantic import (
     AfterValidator,
@@ -14,7 +14,11 @@ from pydantic import (
 )
 from pydantic_core import PydanticCustomError
 
-__all__ = ["Uri", "AppConfig"]
+from crabcomp.result import ErrorCode, Result
+
+__all__ = ["Uri", "AppConfig", "AppConfigErrorCodes"]
+
+_logger = logging.getLogger(__name__)
 
 type Uri = AnyUrl | Path  # order is significant
 
@@ -32,10 +36,11 @@ def _check_uri(uri: Uri) -> Uri:
         The validated, unmodified uri.
     """
     if uri is None:
+        _logger.debug("Nullish URI detected during validation.")
         return uri
 
-    # Ensure file exists if it's a local path
-    if isinstance(uri, Path) and not (uri.exists() or uri.is_file()):
+    # Ensure file exists if it's a local path.
+    if isinstance(uri, Path) and (not uri.exists() or not uri.is_file()):
         raise ValidationError.from_exception_data(
             title="Invalid Data Path",
             line_errors=[
@@ -63,6 +68,7 @@ def _transform_log_string(level: Any) -> int:
         The integer representation of the passed log level, if available.
     """
     if level is None:
+        _logger.debug("Nullish log level detected during validation.")
         return level
 
     # Get valid logging levels excluding NOTSET.
@@ -88,6 +94,15 @@ def _transform_log_string(level: Any) -> int:
     )
 
 
+class AppConfigErrorCodes(ErrorCode):
+    """
+    Indicates an error was encountered while attempting to extract and validate
+    the application configuration from an environment.
+    """
+
+    INVALID_CONFIGURATION = ErrorCode.auto()
+
+
 class AppConfig(BaseModel):
     """
     A configuration parser, validator, data storage construct used to
@@ -106,7 +121,32 @@ class AppConfig(BaseModel):
     data_uri: Annotated[Uri, AfterValidator(_check_uri), Field(alias="DATA_URI")]
     """The local path or web url to a file containing the expected data."""
 
-    level: Annotated[
+    log_level: Annotated[
         int, BeforeValidator(_transform_log_string), Field(alias="LOG_LEVEL")
     ] = logging.INFO
     """The minimum level to use when outputting logs. Defaults to INFO"""
+
+    @staticmethod
+    def extract(environ: Mapping[str, Any]) -> Result["AppConfig"]:
+        """Extracts the application configuration.
+
+        Args:
+            environ: the environment extract the configuration from.
+
+        Raises:
+            AppConfigurationError if unable to extract the configuration information
+            from the provided environment.
+
+        Returns:
+            The wrapped application configuration if provided environment contains valid definitions.
+        """
+        _logger.debug("Attempting to application extract configuration.")
+        try:
+            app_config = AppConfig.model_validate(environ)
+        except ValidationError as err:
+            _logger.error(
+                f"Failed to extract configuration from provided environment. Errors: {err.json()}"
+            )
+            return Result.failure(AppConfigErrorCodes.INVALID_CONFIGURATION)
+
+        return Result.success(app_config)
