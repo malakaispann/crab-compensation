@@ -9,8 +9,7 @@ from pyspark.sql import SparkSession
 
 from crabcomp.config import AppConfig
 from crabcomp.log import configure_root_logger, reset_root_logger
-from crabcomp.models import CompensationAnalysis
-from crabcomp.operations import read_csv, analyze_year_compensation
+from crabcomp.operations import read_csv, analyze_year_compensation, write_analysis_json
 from crabcomp.result import Result
 
 _logger = logging.getLogger(__name__)
@@ -24,7 +23,9 @@ logging.getLogger("py4j.java_gateway").setLevel(logging.WARNING)
 logging.getLogger("py4j.clientserver").setLevel(logging.WARNING)
 
 
-def _try_unrecoverable_operation(result: Result[T], msg: str) -> T:
+def _try_unrecoverable_operation(
+    result: Result[T], msg: str, nullish_ok: bool = False
+) -> T:
     """_summary_
 
     Args:
@@ -34,7 +35,7 @@ def _try_unrecoverable_operation(result: Result[T], msg: str) -> T:
     Returns:
         _description_
     """
-    if result.is_failure or result.value is None:
+    if result.is_failure or (not nullish_ok and result.value is None):
         _logger.error(f"{msg}. Cause: {str(result.code)}. Exiting program.")
         sys.exit(1)
 
@@ -96,9 +97,12 @@ def main():
         f"Analysis failed for year {args.year}",
     )
 
-    output = analysis.model_dump_json()
-
-    _logger.debug(output)
+    # Write the analysis output to the configured output URI
+    _try_unrecoverable_operation(
+        write_analysis_json(session, analysis, app_config.output_uri),
+        "Failed to write analysis results",
+        nullish_ok=True,
+    )
 
     session.stop()
 

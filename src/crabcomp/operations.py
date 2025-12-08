@@ -38,6 +38,7 @@ class OperationErrorCodes(ErrorCode):
     FAILED_READ = ErrorCode.auto()
     FAILED_ANALYSIS = ErrorCode.auto()
     INVALID_YEAR = ErrorCode.auto()
+    FAILED_WRITE = ErrorCode.auto()
 
 
 def read_csv(session: SparkSession, uri: Uri) -> Result[DataFrame]:
@@ -236,3 +237,36 @@ def analyze_year_compensation(
 
     _logger.info(f"Successfully analyzed data for fiscal year {year}")
     return Result.success(analysis)
+
+
+def write_analysis_json(
+    session: SparkSession, analysis: CompensationAnalysis, output_uri: Uri
+) -> Result[None]:
+    """Write analysis results to a JSON file.
+
+    Args:
+        session: The SparkSession to use for writing
+        analysis: The CompensationAnalysis to write
+        output_uri: The URI to write the JSON file to
+
+    Returns:
+        A Result indicating success or failure of the write operation
+    """
+    _logger.info(f"Writing analysis results to {output_uri}")
+
+    try:
+        # Convert the analysis to a dictionary
+        output_dict = analysis.model_dump()
+
+        # Create a DataFrame from the dictionary
+        analysis_df = session.createDataFrame([output_dict])
+
+        # Write as JSON to the output URI (supports both local and remote paths)
+        analysis_df.coalesce(1).write.mode("overwrite").json(str(output_uri))
+
+        _logger.info(f"Analysis results written to: {output_uri}")
+        return Result.success(None)
+
+    except PySparkException as exc:
+        _logger.error(f"Failed to write analysis results. Error: {exc.getMessage()}")
+        return Result.failure(OperationErrorCodes.FAILED_WRITE)

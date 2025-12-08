@@ -12,6 +12,7 @@ from crabcomp.operations import (
     extract_top_vendors,
     extract_year_dataframe,
     read_csv,
+    write_analysis_json,
 )
 
 
@@ -244,3 +245,76 @@ class TestAnalyzeYearCompensation:
         assert analysis.transaction_count == 1
         assert len(analysis.top_vendors) == 1
         assert analysis.top_vendors[0].vendor_name == "Vendor Foo"
+
+
+@fixture(scope="module")
+def sample_analysis():
+    """Create a sample CompensationAnalysis for testing - cached at module level."""
+    return CompensationAnalysis(
+        fiscal_year=2024,
+        total_amount=100000.0,
+        average_transaction=5000.0,
+        min_transaction=100.0,
+        max_transaction=25000.0,
+        transaction_count=20,
+        top_vendors=[
+            {
+                "vendor_name": "Test Vendor 1",
+                "total_paid": 50000.0,
+                "transaction_count": 10,
+            },
+            {
+                "vendor_name": "Test Vendor 2",
+                "total_paid": 30000.0,
+                "transaction_count": 5,
+            },
+        ],
+    )
+
+
+class TestWriteAnalysisJson:
+
+    def test_Returns_success_When_write_successful(
+        self, spark_session, sample_analysis
+    ):
+        # Create mocks for the write chain
+        mock_coalesce_result = MagicMock()
+        mock_write_result = MagicMock()
+
+        # Set up the chain
+        spark_session.createDataFrame.return_value.coalesce.return_value = (
+            mock_coalesce_result
+        )
+        mock_coalesce_result.write.mode.return_value = mock_write_result
+
+        result = write_analysis_json(spark_session, sample_analysis, "s3://output/path")
+
+        assert result.is_success
+        assert result.value is None
+
+        # Verify the DataFrame was created with the correct data
+        spark_session.createDataFrame.assert_called_once()
+        call_args = spark_session.createDataFrame.call_args[0][0]
+        assert len(call_args) == 1
+        assert call_args[0]["fiscalYear"] == 2024
+        assert call_args[0]["totalAmount"] == 100000.0
+
+        # Verify write chain was called correctly
+        spark_session.createDataFrame.return_value.coalesce.assert_called_once_with(1)
+        mock_coalesce_result.write.mode.assert_called_once_with("overwrite")
+        mock_write_result.json.assert_called_once_with("s3://output/path")
+
+    def test_Returns_failure_With_failed_write_code_When_spark_exception_raised(
+        self, spark_session, sample_analysis
+    ):
+        # Mock the side effect to raise PySparkException
+        def raise_spark_exception(*args, **kwargs):
+            raise PySparkException("SPARK_ERROR", "Test write error")
+
+        spark_session.createDataFrame.side_effect = raise_spark_exception
+
+        result = write_analysis_json(spark_session, sample_analysis, "s3://output/path")
+
+        assert result.is_failure
+        assert result.code == OperationErrorCodes.FAILED_WRITE
+        assert result.value is None
