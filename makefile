@@ -1,10 +1,16 @@
+.PHONY: clean
 .PHONY: format
 .PHONY: format-check
 .PHONY: install-dev
 .PHONY: install-prod
 .PHONY: lint-check
+.PHONY: package
+.PHONY: package-module
+.PHONY: package-dependencies
 .PHONY: test
 
+clean:
+	rm -rf dist/ logs/ temp/ .venv/
 
 format:
 	uv run black src
@@ -20,6 +26,17 @@ install-prod:
 
 lint-check:
 	uv run pylint src
+
+package: package-dependencies package-module
+
+package-dependencies:
+	mkdir -p dist
+	uv export --format requirements.txt --no-dev > dist/requirements.txt
+	uv pip install --requirements dist/requirements.txt --target dist/dependencies
+	zip -r dist/dependencies.zip dist/dependencies
+
+package-module:
+	uv build
 
 start-local:
 	uv run --env-file dev.conf start --year 2024

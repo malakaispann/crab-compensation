@@ -25,13 +25,13 @@ requires-python = ">=3.13"
 
 dependencies = [
     "pydantic>=2.12.5",
-    "pyspark>=4.0.1",
 ]
 
 [dependency-groups]
 dev = [
 	{include-group = "format"},
-  	{include-group = "test"}
+	{include-group = "test"},
+	"pyspark>=4.0.1",
 ]
 format = [
     "black>=25.11.0",
