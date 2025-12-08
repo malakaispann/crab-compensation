@@ -22,7 +22,7 @@ lint-check:
 	uv run pylint src
 
 start-local:
-	uv run --env-file dev.conf start 
+	uv run --env-file dev.conf start --year 2024
 
 test:
-	uv run pytest
+	uv run --env-file dev.conf pytest

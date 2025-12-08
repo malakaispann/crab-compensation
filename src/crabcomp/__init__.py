@@ -1,3 +1,4 @@
+import argparse
 import logging
 import os
 import sys
@@ -8,12 +9,19 @@ from pyspark.sql import SparkSession
 
 from crabcomp.config import AppConfig
 from crabcomp.log import configure_root_logger, reset_root_logger
-from crabcomp.operations import read_csv
+from crabcomp.models import CompensationAnalysis
+from crabcomp.operations import read_csv, analyze_year_compensation
 from crabcomp.result import Result
 
 _logger = logging.getLogger(__name__)
 
-T = TypeVar("Type")
+T = TypeVar("T")
+
+# Suppress noisy PySpark logs
+logging.getLogger("py4j").setLevel(logging.WARNING)
+logging.getLogger("pyspark").setLevel(logging.WARNING)
+logging.getLogger("py4j.java_gateway").setLevel(logging.WARNING)
+logging.getLogger("py4j.clientserver").setLevel(logging.WARNING)
 
 
 def _try_unrecoverable_operation(result: Result[T], msg: str) -> T:
@@ -33,7 +41,31 @@ def _try_unrecoverable_operation(result: Result[T], msg: str) -> T:
     return result.value
 
 
+def _valid_year(year_string):
+    """Validate that the year is within the available data range."""
+    year = int(year_string)
+    if year < 2008 or year > 2024:
+        raise argparse.ArgumentTypeError(
+            f"Year {year} is out of range. Data is available from 2008 to 2024."
+        )
+    return year
+
+
 def main():
+    """Main entry point for the crab compensation analysis CLI."""
+    # Set up argument parser
+    parser = argparse.ArgumentParser(
+        description="Analyze Maryland state compensation data for a specific fiscal year"
+    )
+    parser.add_argument(
+        "-y",
+        "--year",
+        type=_valid_year,
+        required=True,
+        help="Fiscal year to analyze (2008-2024)",
+    )
+
+    args = parser.parse_args()
 
     # Ensure logging pre-configuration
     configure_root_logger()
@@ -56,7 +88,17 @@ def main():
         read_csv(session, app_config.data_uri), "Data read failed"
     )
 
-    dataframe.show()
+    _logger.info("Beginning data analysis.")
+
+    # Analyze the data for the specified year
+    analysis = _try_unrecoverable_operation(
+        analyze_year_compensation(dataframe, args.year),
+        f"Analysis failed for year {args.year}",
+    )
+
+    output = analysis.model_dump_json()
+
+    _logger.debug(output)
 
     session.stop()
 
