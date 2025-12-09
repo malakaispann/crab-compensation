@@ -16,6 +16,7 @@ from crabcomp.config import Uri
 from crabcomp.models import CompensationAnalysis, CompensationStatistics, VendorSummary
 from crabcomp.result import ErrorCode, Result
 
+
 _data_schema = StructType(
     [
         StructField(name="Fiscal Year", dataType=IntegerType(), nullable=False),
@@ -62,6 +63,10 @@ def read_csv(session: SparkSession, uri: Uri) -> Result[DataFrame]:
             .csv(str(uri), header=True)
             .cache()
         )
+
+        # Checkpoint the initial dataframe for fault tolerance
+        dataframe.checkpoint()
+        _logger.info("Initial dataframe checkpointed")
     except PySparkException as exc:
         _logger.error(f"Failed to read datafile into dataframe. Error: {str(exc)}")
         return Result.failure(OperationErrorCodes.FAILED_READ)
@@ -92,6 +97,10 @@ def extract_year_dataframe(dataframe: DataFrame, year: int) -> Result[DataFrame]
             _logger.error(f"No data found for fiscal year {year}")
             year_dataframe.unpersist()
             return Result.failure(OperationErrorCodes.INVALID_YEAR)
+
+        # Checkpoint the year dataframe for fault tolerance during analysis
+        year_dataframe.checkpoint()
+        _logger.info(f"Year {year} dataframe checkpointed with {count} records")
 
         return Result.success(year_dataframe)
 
@@ -165,6 +174,10 @@ def extract_top_vendors(
             .cache()
         )
 
+        # Checkpoint vendor aggregations for fault tolerance
+        vendor_agg_dataframe.checkpoint()
+        _logger.debug("Vendor aggregation dataframe checkpointed")
+
         # Get top vendors by total amount paid
         top_vendors = (
             vendor_agg_dataframe.orderBy(functions.desc("total_paid"))
@@ -218,6 +231,10 @@ def analyze_year_compensation(
         return stats_result
 
     stats = stats_result.value
+
+    # Checkpoint after statistics extraction for progress persistence
+    year_dataframe.checkpoint()
+    _logger.debug("Post-statistics checkpoint created")
 
     # Extract top vendors
     if (vendors_result := extract_top_vendors(year_dataframe)).is_failure:

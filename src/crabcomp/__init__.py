@@ -3,6 +3,7 @@ import logging
 import os
 import sys
 
+from pathlib import Path
 from typing import TypeVar
 
 from pyspark.sql import SparkSession
@@ -84,6 +85,11 @@ def main():
 
     _logger.info("Creating distributed session manager.")
     session = SparkSession.builder.appName("Crab Compensation").getOrCreate()
+
+    # Configure checkpointing for fault tolerance
+    checkpoint_dir = f"{str(app_config.output_uri)}/checkpoints"
+    session.sparkContext.setCheckpointDir(checkpoint_dir)
+    _logger.info(f"Checkpoint directory set to: {checkpoint_dir}")
 
     dataframe = _try_unrecoverable_operation(
         read_csv(session, app_config.data_uri), "Data read failed"
