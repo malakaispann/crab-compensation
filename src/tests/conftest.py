@@ -1,6 +1,7 @@
 """Shared test fixtures and configuration."""
 
 import pytest
+from pathlib import Path
 from pyspark.sql import SparkSession
 
 
@@ -16,5 +17,10 @@ def spark():
         # ~200 partitions to improve performance
         .getOrCreate()
     )
+    
+    # Configure checkpointing for fault tolerance in tests
+    checkpoint_dir = str(Path(__file__).parents[2] / "temp" / "checkpoints")
+    spark.sparkContext.setCheckpointDir(checkpoint_dir)
+    
     yield spark
     spark.stop()
