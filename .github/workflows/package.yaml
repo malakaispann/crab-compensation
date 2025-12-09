@@ -22,9 +22,11 @@ jobs:
     - name: Build package
       run: make package
       
-    - name: Upload package artifact
+    - name: Upload package artifacts
       uses: actions/upload-artifact@v4
       with:
         name: crab-compensation-package
-        path: dist/crab-compensation.zip
+        path: |
+          dist/*.whl
+          dist/dependencies.zip
         retention-days: 7

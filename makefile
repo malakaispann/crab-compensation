@@ -2,15 +2,15 @@
 .PHONY: format
 .PHONY: format-check
 .PHONY: install-dev
+.PHONY: install-prod
 .PHONY: lint-check
 .PHONY: package
+.PHONY: package-module
+.PHONY: package-dependencies
 .PHONY: test
 
-PY_VERSION  := 3.13
-VENV_DIR    := emr-venv
-
 clean:
-	rm -rf dist/ logs/ temp/ .venv/ $(VENV_DIR)
+	rm -rf dist/ logs/ temp/ .venv/
 
 format:
 	uv run black src
@@ -22,23 +22,21 @@ install-dev:
 	uv sync
 
 install-prod:
+	uv sync --no-dev
 
 lint-check:
 	uv run pylint src
 
-package:
-	uv python install $(PY_VERSION)
-	
-	# Create a self-contained venv using uv's Python
-	rm -rf $(VENV_DIR)
-	PY313=$$(uv python find $(PY_VERSION)) && \
-	"$$PY313" -m venv $(VENV_DIR)
-	
-	$(VENV_DIR)/bin/python -m pip install --upgrade pip
-	$(VENV_DIR)/bin/pip install .
-	
+package: package-dependencies package-module
+
+package-dependencies:
 	mkdir -p dist
-	cd $(VENV_DIR) && zip -r ../dist/crab-compensation.zip .
+	uv export --format requirements.txt --no-dev > dist/requirements.txt
+	uv pip install --requirements dist/requirements.txt --target dist/dependencies
+	cd dist && zip -r dependencies.zip dependencies
+
+package-module:
+	uv build
 
 
 start-local:
