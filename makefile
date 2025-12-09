@@ -33,7 +33,7 @@ package-dependencies:
 	mkdir -p dist
 	uv export --format requirements.txt --no-dev > dist/requirements.txt
 	uv pip install --requirements dist/requirements.txt --target dist/dependencies
-	cd dist && zip -r dependencies.zip dependencies
+	cd dist/dependencies && zip -r ../dependencies.zip .
 
 package-module:
 	uv build
