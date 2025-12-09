@@ -63,9 +63,7 @@ def read_csv(session: SparkSession, uri: Uri) -> Result[DataFrame]:
             .cache()
         )
     except PySparkException as exc:
-        _logger.error(
-            f"Failed to read datafile into dataframe. Error: {str(exc)}"
-        )
+        _logger.error(f"Failed to read datafile into dataframe. Error: {str(exc)}")
         return Result.failure(OperationErrorCodes.FAILED_READ)
 
     _logger.info("Read operation successful.")
