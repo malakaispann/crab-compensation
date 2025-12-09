@@ -127,7 +127,7 @@ class AppConfig(BaseModel):
     """The local path or web url to a file containing the expected data."""
 
     output_uri: Annotated[Uri, Field(alias="OUTPUT_URI")]
-    """The local path or web url to a file where analysis output will be written."""
+    """The local path or web url to the base directory where analysis output will be written."""
 
     log_level: Annotated[
         int, BeforeValidator(_transform_log_string), Field(alias="LOG_LEVEL")
