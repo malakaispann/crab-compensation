@@ -38,22 +38,30 @@ The application is designed to run on AWS EMR clusters with pre-installed Spark.
    ```bash
    make package
    ```
-   This creates `crab-compensation.zip` in the `dist/` directory. This package is essential because:
-   - The application requires Python 3.13+, while Amazon Linux AMIs typically only support up to Python 3.11
-   - The zip contains a complete Python 3.13+ virtual environment including:
-     - The Python 3.13+ binary and standard library
-     - All production dependencies
-     - The crab-compensation application code
-   - This self-contained approach allows running modern Python applications on EMR with minimal configuration
+   This creates two files in the `dist/` directory:
+   - `crab_compensation-0.0.0-py3-none-any.whl` - The application wheel
+   - `dependencies.zip` - All production dependencies bundled together
 
-2. Upload the package, driver code (basic wrapper), and input data to S3:
+2. Upload the packages and input data to S3:
    ```bash
-   aws s3 cp dist/crab-compensation.zip s3://your-bucket/crab-compensation/
+   aws s3 cp dist/crab_compensation-0.0.0-py3-none-any.whl s3://your-bucket/crab-compensation/
+   aws s3 cp dist/dependencies.zip s3://your-bucket/crab-compensation/
    aws s3 cp driver.py s3://your-bucket/crab-compensation/
    aws s3 cp data/State_of_Maryland_Payments_Data__FY2008_to_FY2024.csv.gz s3://your-bucket/crab-compensation/
    ```
 
-3. Submit the job to EMR using the driver script with appropriate Spark configurations.
+3. Submit the job to EMR:
+   ```bash
+   spark-submit --deploy-mode cluster \
+     --py-files s3://your-bucket/crab-compensation/dependencies.zip,s3://your-bucket/crab-compensation/crab_compensation-0.0.0-py3-none-any.whl \
+     --conf spark.yarn.appMasterEnv.LOG_LEVEL=INFO \
+     --conf spark.executorEnv.LOG_LEVEL=INFO \
+     --conf spark.yarn.appMasterEnv.DATA_URI=s3://your-bucket/crab-compensation/State_of_Maryland_Payments_Data__FY2008_to_FY2024.csv.gz \
+     --conf spark.executorEnv.DATA_URI=s3://your-bucket/crab-compensation/State_of_Maryland_Payments_Data__FY2008_to_FY2024.csv.gz \
+     --conf spark.yarn.appMasterEnv.OUTPUT_URI=s3://your-bucket/crab-compensation/crab_comp_results.json \
+     --conf spark.executorEnv.OUTPUT_URI=s3://your-bucket/crab-compensation/crab_comp_results.json \
+     s3://your-bucket/crab-compensation/driver.py --year 2022
+   ```
 
 ## Data
 
