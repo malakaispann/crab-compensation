@@ -2,11 +2,8 @@
 .PHONY: format
 .PHONY: format-check
 .PHONY: install-dev
-.PHONY: install-prod
 .PHONY: lint-check
 .PHONY: package
-.PHONY: package-module
-.PHONY: package-dependencies
 .PHONY: test
 
 clean:
@@ -22,21 +19,15 @@ install-dev:
 	uv sync
 
 install-prod:
-	uv sync --no-dev
 
 lint-check:
 	uv run pylint src
 
-package: package-dependencies package-module
-
-package-dependencies:
+package:
 	mkdir -p dist
-	uv export --format requirements.txt --no-dev > dist/requirements.txt
-	uv pip install --requirements dist/requirements.txt --target dist/dependencies
-	zip -r dist/dependencies.zip dist/dependencies
+	uv sync --no-dev
+	cd .venv && zip -r ../dist/crab-compensation.zip .
 
-package-module:
-	uv build
 
 start-local:
 	uv run --env-file dev.conf start --year 2024
