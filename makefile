@@ -6,8 +6,11 @@
 .PHONY: package
 .PHONY: test
 
+PY_VERSION  := 3.13
+VENV_DIR    := emr-venv
+
 clean:
-	rm -rf dist/ logs/ temp/ .venv/
+	rm -rf dist/ logs/ temp/ .venv/ $(VENV_DIR)
 
 format:
 	uv run black src
@@ -24,9 +27,18 @@ lint-check:
 	uv run pylint src
 
 package:
+	uv python install $(PY_VERSION)
+	
+	# Create a self-contained venv using uv's Python
+	rm -rf $(VENV_DIR)
+	PY313=$$(uv python find $(PY_VERSION)) && \
+	"$$PY313" -m venv $(VENV_DIR)
+	
+	$(VENV_DIR)/bin/python -m pip install --upgrade pip
+	$(VENV_DIR)/bin/pip install .
+	
 	mkdir -p dist
-	uv sync --no-dev
-	cd .venv && zip -r ../dist/crab-compensation.zip .
+	cd $(VENV_DIR) && zip -r ../dist/crab-compensation.zip .
 
 
 start-local:
