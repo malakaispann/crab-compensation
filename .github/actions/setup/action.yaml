@@ -1,5 +1,11 @@
 name: "Project Setup"
-description: "Install UV and dev dependencies for application."
+description: "Install UV and dependencies for application."
+
+inputs:
+  install-type:
+    description: "Type of dependencies to install (dev or prod)"
+    required: false
+    default: "dev"
 
 runs:
   using: "composite"
@@ -15,4 +21,4 @@ runs:
 
       - name: Install dependencies
         shell: bash
-        run: make install-dev
+        run: make install-${{ inputs.install-type }}
