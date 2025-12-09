@@ -27,32 +27,33 @@ make format        # Auto-format code
 make install-dev   # Install all dependencies including dev tools
 make install-prod  # Install only production dependencies
 make lint-check    # Check code quality
-make package       # Build both dependency zip and module wheel
+make package       # Build distribution package with all dependencies
 make test          # Run the test suite
 ```
 
 ### AWS EMR Deployment
 The application is designed to run on AWS EMR clusters with pre-installed Spark. To deploy:
 
-1. Build the deployment artifacts:
+1. Build the deployment package:
    ```bash
    make package
    ```
-   This creates two files in the `dist/` directory:
-   - `dependencies.zip` - Contains all production dependencies
-   - `crab_compensation-0.0.0-py3-none-any.whl` - The application wheel file
+   This creates `crab-compensation.zip` in the `dist/` directory. This package is essential because:
+   - The application requires Python 3.13+, while Amazon Linux AMIs typically only support up to Python 3.11
+   - The zip contains a complete Python 3.13+ virtual environment including:
+     - The Python 3.13+ binary and standard library
+     - All production dependencies
+     - The crab-compensation application code
+   - This self-contained approach allows running modern Python applications on EMR with minimal configuration
 
-2. Upload both files to S3:
+2. Upload the package, driver code (basic wrapper), and input data to S3:
    ```bash
-   aws s3 cp dist/dependencies.zip s3://your-bucket/crab-compensation/
-   aws s3 cp dist/crab_compensation-0.0.0-py3-none-any.whl s3://your-bucket/crab-compensation/
+   aws s3 cp dist/crab-compensation.zip s3://your-bucket/crab-compensation/
+   aws s3 cp driver.py s3://your-bucket/crab-compensation/
+   aws s3 cp data/State_of_Maryland_Payments_Data__FY2008_to_FY2024.csv.gz s3://your-bucket/crab-compensation/
    ```
-3. Upload the input data to S3:
-    ```bash
-    aws s3 cp data/State_of_Maryland_Payments_Data__FY2008_to_FY2024.csv.gz s3://your-bucket/crab-compensation/
-    ```
 
-4. Submit the job to EMR with appropriate Spark configurations pointing to these artifacts.
+3. Submit the job to EMR using the driver script with appropriate Spark configurations.
 
 ## Data
 
