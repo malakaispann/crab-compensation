@@ -117,7 +117,7 @@ class TestReadCsv:
     ):
         # Mock the side effect to raise PySparkException
         def raise_spark_exception(*_, **__):
-            raise PySparkException("SPARK_ERROR", "Test error")
+            raise PySparkException("Test error")
 
         spark_session.read.schema.side_effect = raise_spark_exception
 
@@ -309,7 +309,7 @@ class TestWriteAnalysisJson:
     ):
         # Mock the side effect to raise PySparkException
         def raise_spark_exception(*args, **kwargs):
-            raise PySparkException("SPARK_ERROR", "Test write error")
+            raise PySparkException("Test write error")
 
         spark_session.createDataFrame.side_effect = raise_spark_exception
 

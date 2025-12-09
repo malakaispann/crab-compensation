@@ -1,7 +1,7 @@
 import enum
 
 from dataclasses import dataclass
-from typing import override, Generic, Optional, TypeVar
+from typing import Generic, Optional, TypeVar
 
 
 __all__ = ["ErrorCode", "GenericCode", "Result", "ResultCode"]
@@ -12,7 +12,6 @@ T = TypeVar("T")
 class ResultCode(enum.IntEnum):
     """Base class for result codes representing success or failure states."""
 
-    @override
     def __str__(self) -> str:
         return self.name.replace("_", " ").title()
 
@@ -97,6 +96,5 @@ class Result(Generic[T]):
         """
         return Result(code, value)
 
-    @override
     def __str__(self) -> str:
         return f"({str(self.code.__class__.__name__)}){str(self.code)}"

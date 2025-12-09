@@ -32,25 +32,29 @@ class TestLogLevel:
     ):
         assert (
             AppConfig.model_validate(
-                {self.CONFIG_ID: level} | MINIMUM_VALID_CONFIG
+                {**{self.CONFIG_ID: level}, **MINIMUM_VALID_CONFIG}
             ).log_level
             == representation
         )
 
     def test_Returns_info_representation_When_level_not_provided(self):
         assert (
-            AppConfig.model_validate(MINIMUM_VALID_CONFIG | {}).log_level
+            AppConfig.model_validate({**MINIMUM_VALID_CONFIG, **{}}).log_level
             == logging.INFO
         )
 
     def test_Raises_validation_error_When_notset_level_provided(self):
         with raises(ValidationError) as err:
-            AppConfig.model_validate(MINIMUM_VALID_CONFIG | {self.CONFIG_ID: "NOTSET"})
+            AppConfig.model_validate(
+                {**MINIMUM_VALID_CONFIG, **{self.CONFIG_ID: "NOTSET"}}
+            )
         assert "invalid_log_level" in str(err.value)
 
     def test_Raises_validation_error_When_invalid_level_provided(self):
         with raises(ValidationError) as err:
-            AppConfig.model_validate(MINIMUM_VALID_CONFIG | {self.CONFIG_ID: "foo"})
+            AppConfig.model_validate(
+                {**MINIMUM_VALID_CONFIG, **{self.CONFIG_ID: "foo"}}
+            )
         assert "invalid_log_level" in str(err.value)
 
 
@@ -63,7 +67,7 @@ class TestDataUri:
         assert (
             str(
                 AppConfig.model_validate(
-                    MINIMUM_VALID_CONFIG | {self.CONFIG_ID: url}
+                    {**MINIMUM_VALID_CONFIG, **{self.CONFIG_ID: url}}
                 ).data_uri
             )
             == url
@@ -75,7 +79,7 @@ class TestDataUri:
         with tempfile.NamedTemporaryFile() as temp_file:
             path = Path(temp_file.name)
             config = AppConfig.model_validate(
-                MINIMUM_VALID_CONFIG | {self.CONFIG_ID: str(path)}
+                {**MINIMUM_VALID_CONFIG, **{self.CONFIG_ID: str(path)}}
             )
             assert config.data_uri == path
 
@@ -85,7 +89,7 @@ class TestDataUri:
         non_existent_path = "/tmp/this_file_definitely_does_not_exist_1234567890.tar.gz"
         with raises(ValidationError) as err:
             AppConfig.model_validate(
-                MINIMUM_VALID_CONFIG | {self.CONFIG_ID: non_existent_path}
+                {**MINIMUM_VALID_CONFIG, **{self.CONFIG_ID: non_existent_path}}
             )
         assert "invalid_data_path" in str(err.value)
 
@@ -95,7 +99,7 @@ class TestDataUri:
         with tempfile.TemporaryDirectory() as temp_dir:
             with raises(ValidationError) as err:
                 AppConfig.model_validate(
-                    MINIMUM_VALID_CONFIG | {self.CONFIG_ID: temp_dir}
+                    {**MINIMUM_VALID_CONFIG, **{self.CONFIG_ID: temp_dir}}
                 )
             assert "invalid_data_path" in str(err.value)
 
@@ -109,7 +113,7 @@ class TestOutputUri:
         assert (
             str(
                 AppConfig.model_validate(
-                    MINIMUM_VALID_CONFIG | {self.CONFIG_ID: url}
+                    {**MINIMUM_VALID_CONFIG, **{self.CONFIG_ID: url}}
                 ).output_uri
             )
             == url
@@ -117,7 +121,9 @@ class TestOutputUri:
 
     def test_Returns_path_When_provided_local_path(self):
         path = "/tmp/output.json"
-        config = AppConfig.model_validate(MINIMUM_VALID_CONFIG | {self.CONFIG_ID: path})
+        config = AppConfig.model_validate(
+            {**MINIMUM_VALID_CONFIG, **{self.CONFIG_ID: path}}
+        )
         assert config.output_uri == Path(path)
 
 

@@ -64,7 +64,7 @@ def read_csv(session: SparkSession, uri: Uri) -> Result[DataFrame]:
         )
     except PySparkException as exc:
         _logger.error(
-            f"Failed to read datafile into dataframe. Error: {exc.getMessage()}"
+            f"Failed to read datafile into dataframe. Error: {str(exc)}"
         )
         return Result.failure(OperationErrorCodes.FAILED_READ)
 
@@ -98,7 +98,7 @@ def extract_year_dataframe(dataframe: DataFrame, year: int) -> Result[DataFrame]
         return Result.success(year_dataframe)
 
     except PySparkException as exc:
-        _logger.error(f"Failed to extract year data. Error: {exc.getMessage()}")
+        _logger.error(f"Failed to extract year data. Error: {str(exc)}")
         return Result.failure(OperationErrorCodes.FAILED_ANALYSIS)
 
 
@@ -138,7 +138,7 @@ def extract_general_statistics(
         )
 
     except PySparkException as exc:
-        _logger.error(f"Failed to extract statistics. Error: {exc.getMessage()}")
+        _logger.error(f"Failed to extract statistics. Error: {str(exc)}")
         return Result.failure(OperationErrorCodes.FAILED_ANALYSIS)
 
 
@@ -190,7 +190,7 @@ def extract_top_vendors(
         return Result.success(vendor_summaries)
 
     except PySparkException as exc:
-        _logger.error(f"Failed to extract top vendors. Error: {exc.getMessage()}")
+        _logger.error(f"Failed to extract top vendors. Error: {str(exc)}")
         return Result.failure(OperationErrorCodes.FAILED_ANALYSIS)
 
 
@@ -268,5 +268,5 @@ def write_analysis_json(
         return Result.success(None)
 
     except PySparkException as exc:
-        _logger.error(f"Failed to write analysis results. Error: {exc.getMessage()}")
+        _logger.error(f"Failed to write analysis results. Error: {str(exc)}")
         return Result.failure(OperationErrorCodes.FAILED_WRITE)

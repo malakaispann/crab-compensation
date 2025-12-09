@@ -2,18 +2,17 @@ import json
 import sys
 
 from logging import getLogger, Formatter, INFO, Logger, StreamHandler
-from typing import override
+from typing import Optional
 
 
 __all__ = ["configure_root_logger", "reset_root_logger", "JsonFormatter"]
 
-__last_stream_handler: StreamHandler | None = None
+__last_stream_handler: Optional[StreamHandler] = None
 
 
 class JsonFormatter(Formatter):
     """A formatter used to output all logs in JSON format."""
 
-    @override
     def format(self, record):
         return json.dumps(
             {

@@ -1,7 +1,7 @@
 import logging
 
 from pathlib import Path
-from typing import Annotated, Any, Mapping
+from typing import Annotated, Any, Mapping, Union
 
 from pydantic import (
     AfterValidator,
@@ -20,7 +20,7 @@ __all__ = ["Uri", "AppConfig", "AppConfigErrorCodes"]
 
 _logger = logging.getLogger(__name__)
 
-type Uri = AnyUrl | Path  # order is significant
+Uri = Union[AnyUrl, Path]  # order is significant
 
 
 def _check_uri(uri: Uri) -> Uri:
@@ -72,8 +72,13 @@ def _transform_log_string(level: Any) -> int:
         return level
 
     # Get valid logging levels excluding NOTSET.
-    level_mapping = logging.getLevelNamesMapping()
-    level_mapping.pop("NOTSET")
+    level_mapping = {
+        "DEBUG": logging.DEBUG,
+        "INFO": logging.INFO,
+        "WARNING": logging.WARNING,
+        "ERROR": logging.ERROR,
+        "CRITICAL": logging.CRITICAL,
+    }
 
     # Ensure passed level is valid.
     if isinstance(level, str) and (representation := level_mapping.get(level.upper())):
