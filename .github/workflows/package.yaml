@@ -10,9 +10,16 @@ on:
 jobs:
   package:
     runs-on: ubuntu-latest
+    container:
+      image: amazonlinux:2023.9.20251117.1
     
     steps:
-    - uses: actions/checkout@v4
+
+    - name: Install system dependencies
+      run: dnf install -y make tar zip git
+
+    - name: Checkout repo
+      uses: actions/checkout@v4
     
     - name: Setup environment
       uses: ./.github/actions/setup

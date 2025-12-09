@@ -32,7 +32,7 @@ package: package-dependencies package-module
 package-dependencies:
 	mkdir -p dist
 	uv export --format requirements.txt --no-dev > dist/requirements.txt
-	uv pip install --requirements dist/requirements.txt --target dist/dependencies
+	uv pip install --requirements dist/requirements.txt --target dist/dependencies --python-platform x86_64-manylinux_2_28 --only-binary :all:
 	cd dist/dependencies && zip -r ../dependencies.zip .
 
 package-module:
