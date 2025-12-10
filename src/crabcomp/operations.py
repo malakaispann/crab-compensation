@@ -64,7 +64,6 @@ def read_csv(session: SparkSession, uri: Uri) -> Result[DataFrame]:
             .cache()
         )
 
-        # Checkpoint the initial dataframe for fault tolerance
         dataframe.checkpoint()
         _logger.info("Initial dataframe checkpointed")
     except PySparkException as exc:
@@ -88,7 +87,6 @@ def extract_year_dataframe(dataframe: DataFrame, year: int) -> Result[DataFrame]
     _logger.debug(f"Extracting data for fiscal year {year}")
 
     try:
-        # Filter data for the specified year and cache for reuse
         year_dataframe = dataframe.filter(functions.col("Fiscal Year") == year).cache()
 
         # Check if we have data for this year
@@ -98,7 +96,6 @@ def extract_year_dataframe(dataframe: DataFrame, year: int) -> Result[DataFrame]
             year_dataframe.unpersist()
             return Result.failure(OperationErrorCodes.INVALID_YEAR)
 
-        # Checkpoint the year dataframe for fault tolerance during analysis
         year_dataframe.checkpoint()
         _logger.info(f"Year {year} dataframe checkpointed with {count} records")
 
@@ -124,7 +121,6 @@ def extract_general_statistics(
     _logger.debug("Extracting general statistics")
 
     try:
-        # Calculate aggregate statistics
         stats = year_dataframe.agg(
             functions.sum("Amount").alias("total_amount"),
             functions.avg("Amount").alias("average_transaction"),
@@ -164,7 +160,6 @@ def extract_top_vendors(
     _logger.debug(f"Extracting top {limit} vendors")
 
     try:
-        # Create vendor aggregation dataframe and cache it
         vendor_agg_dataframe = (
             year_dataframe.groupBy("Vendor Name")
             .agg(
@@ -174,21 +169,16 @@ def extract_top_vendors(
             .cache()
         )
 
-        # Checkpoint vendor aggregations for fault tolerance
         vendor_agg_dataframe.checkpoint()
         _logger.debug("Vendor aggregation dataframe checkpointed")
 
-        # Get top vendors by total amount paid
         top_vendors = (
             vendor_agg_dataframe.orderBy(functions.desc("total_paid"))
             .limit(limit)
             .collect()
         )
 
-        # Unpersist cached dataframe
         vendor_agg_dataframe.unpersist()
-
-        # Create VendorSummary objects for top vendors
         vendor_summaries = [
             VendorSummary(
                 vendor_name=row["Vendor Name"],
@@ -219,32 +209,26 @@ def analyze_year_compensation(
     """
     _logger.info(f"Analyzing compensation data for fiscal year {year}")
 
-    # Extract dataframe for the specified year
     if (year_dataframe_result := extract_year_dataframe(dataframe, year)).is_failure:
         return year_dataframe_result
 
     year_dataframe = year_dataframe_result.value
 
-    # Extract general statistics
     if (stats_result := extract_general_statistics(year_dataframe, year)).is_failure:
         year_dataframe.unpersist()
         return stats_result
 
     stats = stats_result.value
 
-    # Checkpoint after statistics extraction for progress persistence
     year_dataframe.checkpoint()
     _logger.debug("Post-statistics checkpoint created")
 
-    # Extract top vendors
     if (vendors_result := extract_top_vendors(year_dataframe)).is_failure:
         year_dataframe.unpersist()
         return vendors_result
 
-    # Unpersist the year dataframe as we're done with it
     year_dataframe.unpersist()
 
-    # Create and return the analysis result using model unpacking
     analysis = CompensationAnalysis(
         **stats.model_dump(),
         top_vendors=vendors_result.value,
@@ -270,14 +254,10 @@ def write_analysis_json(
     _logger.info(f"Writing analysis results to {output_uri}")
 
     try:
-        # Convert the analysis to a dictionary
         output_dict = analysis.model_dump()
-
-        # Create a DataFrame from the dictionary
-        analysis_df = session.createDataFrame([output_dict])
-
-        # Write as JSON to the output URI (supports both local and remote paths)
-        analysis_df.coalesce(1).write.mode("overwrite").json(str(output_uri))
+        session.createDataFrame([output_dict]).coalesce(1).write.mode("overwrite").json(
+            str(output_uri)
+        )
 
         _logger.info(f"Analysis results written to: {output_uri}")
         return Result.success(None)
